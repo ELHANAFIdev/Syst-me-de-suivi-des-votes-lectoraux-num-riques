@@ -265,7 +265,6 @@ export default function AddVoterPage() {
           <div className="relative z-10" ref={dropdownRef}>
             <h2 className="text-lg font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
               تعيين مسؤول للناخب (اختياري)
-              <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded-md">ميزة ذكية 🧠</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
               <div className="relative">
