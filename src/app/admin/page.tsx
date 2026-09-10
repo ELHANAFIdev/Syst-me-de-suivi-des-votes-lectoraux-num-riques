@@ -124,27 +124,27 @@ export default function AdminWarRoom() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-blue-400">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-blue-600">
         <Loader2 className="w-12 h-12 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30" dir="rtl">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-500/30" dir="rtl">
       
       {/* Header */}
-      <header className="border-b border-white/10 bg-slate-950/50 backdrop-blur-xl sticky top-0 z-50">
+      <header className="border-b border-slate-200 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
+            <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
               <Activity className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-l from-white to-slate-400 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold bg-gradient-to-l from-slate-800 to-slate-500 bg-clip-text text-transparent">
                 غرفة العمليات المركزية
               </h1>
-              <p className="text-xs text-slate-400 font-mono flex items-center gap-2">
+              <p className="text-xs text-slate-500 font-mono flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-ping"></span>
                 مزامنة لحظية نشطة (Real-Time)
               </p>
@@ -153,16 +153,16 @@ export default function AdminWarRoom() {
           
           <div className="flex items-center gap-6 text-right">
              <div className="flex gap-3">
-               <a href="/admin/tracking" className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg font-bold transition-colors">
+               <a href="/admin/tracking" className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-bold transition-colors">
                  لوحة التتبع (المسؤولين)
                </a>
-               <a href="/admin/import" className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-blue-900/50">
+               <a href="/admin/import" className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-blue-500/30">
                  استيراد الإكسيل
                </a>
              </div>
-             <div className="border-r border-slate-800 pr-6">
-               <div className="text-sm text-slate-400">نسبة المشاركة الإجمالية</div>
-               <div className="text-3xl font-black text-white tracking-tight">
+             <div className="border-r border-slate-200 pr-6">
+               <div className="text-sm text-slate-500">نسبة المشاركة الإجمالية</div>
+               <div className="text-3xl font-black text-slate-900 tracking-tight">
                  {globalStats.percent}%
                </div>
              </div>
@@ -175,28 +175,28 @@ export default function AdminWarRoom() {
         {/* Top KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* KPI 1 */}
-          <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-30 bg-blue-500/5 rounded-full blur-3xl -z-10 group-hover:bg-blue-500/10 transition-colors"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm mb-1">إجمالي الناخبين المستهدفين</p>
-                <p className="text-4xl font-bold text-white">{globalStats.total.toLocaleString('ar-MA')}</p>
+                <p className="text-slate-500 text-sm mb-1">إجمالي الناخبين المستهدفين</p>
+                <p className="text-4xl font-bold text-slate-900">{globalStats.total.toLocaleString('ar-MA')}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
+              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                 <Users className="w-6 h-6" />
               </div>
             </div>
           </div>
           
           {/* KPI 2 */}
-          <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 relative overflow-hidden group">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-30 bg-green-500/5 rounded-full blur-3xl -z-10 group-hover:bg-green-500/10 transition-colors"></div>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm mb-1">إجمالي المصوتين للآن</p>
-                <p className="text-4xl font-bold text-white">{globalStats.voted.toLocaleString('ar-MA')}</p>
+                <p className="text-slate-500 text-sm mb-1">إجمالي المصوتين للآن</p>
+                <p className="text-4xl font-bold text-slate-900">{globalStats.voted.toLocaleString('ar-MA')}</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                 <CheckCircle className="w-6 h-6" />
               </div>
             </div>
@@ -206,16 +206,16 @@ export default function AdminWarRoom() {
         {/* Bureaux Grid */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-slate-800">
               <BarChart3 className="w-5 h-5" />
               <h2 className="text-lg font-semibold">حالة مكاتب التصويت (الأقل مشاركة أولاً)</h2>
             </div>
             
             {/* Province Filter */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">تصفية بالمقاطعة:</span>
+              <span className="text-sm text-slate-500">تصفية بالمقاطعة:</span>
               <select
-                className="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
+                className="bg-white border border-slate-300 text-slate-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
                 value={selectedProvince}
                 onChange={(e) => setSelectedProvince(e.target.value)}
               >
@@ -234,27 +234,28 @@ export default function AdminWarRoom() {
               const isRecentlyActive = bureau.lastActive && Date.now() - bureau.lastActive < 3000;
               
               return (
-                <div 
+                <a 
                   key={bureau.bureau_name}
-                  className={`bg-slate-900 border rounded-2xl p-4 transition-all duration-500 ${
+                  href={`/admin/bureau/${encodeURIComponent(bureau.bureau_name)}`}
+                  className={`block bg-white border shadow-sm rounded-2xl p-4 transition-all duration-500 hover:-translate-y-1 hover:shadow-md cursor-pointer group ${
                     isRecentlyActive 
                       ? 'border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-[1.02] z-10' 
-                      : 'border-white/5 hover:border-white/10'
+                      : 'border-slate-200 hover:border-blue-400'
                   }`}
                 >
-                  <h3 className="font-semibold text-slate-200 text-sm truncate mb-3" title={bureau.bureau_name}>
+                  <h3 className="font-semibold text-slate-800 text-sm truncate mb-3 group-hover:text-blue-600 transition-colors" title={bureau.bureau_name}>
                     {bureau.bureau_name}
                   </h3>
                   
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-2xl font-bold text-white">{percent}%</span>
+                    <span className="text-2xl font-bold text-slate-900">{percent}%</span>
                     <span className="text-xs text-slate-500 mb-1" dir="ltr">
                       {bureau.voted} / {bureau.total}
                     </span>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all duration-1000 ease-out ${
                         percent < 20 ? 'bg-red-500' : percent < 50 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -264,12 +265,12 @@ export default function AdminWarRoom() {
                   </div>
                   
                   {isRecentlyActive && (
-                    <div className="mt-3 text-[10px] text-blue-400 font-bold flex items-center gap-1 animate-pulse">
-                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                    <div className="mt-3 text-[10px] text-blue-600 font-bold flex items-center gap-1 animate-pulse">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                       تم تسجيل تصويت للتو!
                     </div>
                   )}
-                </div>
+                </a>
               );
             })}
           </div>

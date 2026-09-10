@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { Search, Phone, UserX, ChevronDown, ChevronUp, Loader2, PhoneCall } from 'lucide-react';
+import { Search, Phone, UserX, ChevronDown, ChevronUp, Loader2, PhoneCall, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 type Voter = {
   id: string;
@@ -125,6 +126,10 @@ export default function TrackingBoard() {
       <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-slate-200">
         <div className="max-w-4xl mx-auto p-4 space-y-4">
           <div>
+            <Link href="/admin" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors mb-2 font-semibold">
+              <ArrowRight className="w-4 h-4" />
+              العودة لغرفة العمليات
+            </Link>
             <h1 className="text-xl font-bold text-slate-800">تتبع المسؤولين (War Room)</h1>
             <p className="text-sm text-slate-500">
               تحديد المسؤولين الذين لديهم أكبر عدد من الناخبين المتخلفين عن التصويت
