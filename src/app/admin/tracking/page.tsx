@@ -15,6 +15,8 @@ type Voter = {
   telephone_responsable: string;
   sous_responsable: string;
   telephone_sous_responsable: string;
+  bureau_name: string;
+  province?: string;
 };
 
 type ResponsableStat = {
