@@ -61,10 +61,12 @@ export default function TrackingBoard() {
     allVoters.forEach(v => {
       // Process Responsable
       if (v.responsable) {
-        const key = `resp_${v.responsable}`;
+        const normalizedName = v.responsable.trim().toUpperCase();
+        const safePhone = v.telephone_responsable || 'no-phone';
+        const key = `resp_${normalizedName}_${safePhone}`;
         if (!map.has(key)) {
           map.set(key, {
-            name: v.responsable,
+            name: normalizedName,
             phone: v.telephone_responsable,
             type: 'Responsable',
             total: 0,
@@ -81,10 +83,12 @@ export default function TrackingBoard() {
 
       // Process Sous-responsable (if different/exists)
       if (v.sous_responsable) {
-        const key = `sous_${v.sous_responsable}`;
+        const normalizedName = v.sous_responsable.trim().toUpperCase();
+        const safePhone = v.telephone_sous_responsable || 'no-phone';
+        const key = `sous_${normalizedName}_${safePhone}`;
         if (!map.has(key)) {
           map.set(key, {
-            name: v.sous_responsable,
+            name: normalizedName,
             phone: v.telephone_sous_responsable,
             type: 'Sous-responsable',
             total: 0,
