@@ -20,14 +20,20 @@ type Voter = {
   province?: string;
 };
 
+type ViceResponsable = {
+  name: string;
+  phone: string;
+  voters: Voter[];
+};
+
 type ResponsableStat = {
   name: string;
   phone: string;
-  type: 'Responsable' | 'Sous-responsable';
   total: number;
   voted: number;
   nonVoted: number;
-  voters: Voter[];
+  allVoters: Voter[];
+  vices: ViceResponsable[];
 };
 
 export default function TrackingBoard() {
@@ -35,6 +41,12 @@ export default function TrackingBoard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedVices, setExpandedVices] = useState<Record<string, boolean>>({});
+
+  const toggleVice = (viceKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedVices(prev => ({ ...prev, [viceKey]: !prev[viceKey] }));
+  };
 
   useEffect(() => {
     fetchAllData();
@@ -54,59 +66,74 @@ export default function TrackingBoard() {
     setLoading(false);
   };
 
-  // Group voters by Responsable and Sous-responsable
+  // Group voters by Responsable (with Vice nested)
   const responsablesList = useMemo(() => {
-    const map = new Map<string, ResponsableStat>();
+    const map = new Map<string, {
+      name: string;
+      phone: string;
+      total: number;
+      voted: number;
+      nonVoted: number;
+      allVoters: Voter[];
+      vicesMap: Map<string, ViceResponsable>;
+    }>();
 
     allVoters.forEach(v => {
-      // Process Responsable
-      if (v.responsable) {
-        const normalizedName = v.responsable.trim().toUpperCase();
-        const safePhone = v.telephone_responsable || 'no-phone';
-        const key = `resp_${normalizedName}_${safePhone}`;
-        if (!map.has(key)) {
-          map.set(key, {
-            name: normalizedName,
-            phone: v.telephone_responsable,
-            type: 'Responsable',
-            total: 0,
-            voted: 0,
-            nonVoted: 0,
-            voters: []
-          });
-        }
-        const r = map.get(key)!;
-        r.total++;
-        if (v.has_voted) r.voted++; else r.nonVoted++;
-        r.voters.push(v);
+      // Determine top-level name
+      const respName = v.responsable ? v.responsable.trim().toUpperCase() : (v.sous_responsable ? v.sous_responsable.trim().toUpperCase() : null);
+      if (!respName) return; // Skip if no responsable and no sous_responsable
+
+      const key = `resp_${respName}`;
+
+      if (!map.has(key)) {
+        const initialPhone = v.responsable ? v.telephone_responsable : v.telephone_sous_responsable;
+        map.set(key, {
+          name: respName,
+          phone: initialPhone || '',
+          total: 0,
+          voted: 0,
+          nonVoted: 0,
+          allVoters: [],
+          vicesMap: new Map<string, ViceResponsable>()
+        });
       }
 
-      // Process Sous-responsable (if different/exists)
-      if (v.sous_responsable) {
-        const normalizedName = v.sous_responsable.trim().toUpperCase();
-        const safePhone = v.telephone_sous_responsable || 'no-phone';
-        const key = `sous_${normalizedName}_${safePhone}`;
-        if (!map.has(key)) {
-          map.set(key, {
-            name: normalizedName,
-            phone: v.telephone_sous_responsable,
-            type: 'Sous-responsable',
-            total: 0,
-            voted: 0,
-            nonVoted: 0,
+      const r = map.get(key)!;
+      r.total++;
+      if (v.has_voted) r.voted++; else r.nonVoted++;
+      r.allVoters.push(v);
+      
+      // Update phone if it was missing previously
+      if (!r.phone) {
+        r.phone = (v.responsable ? v.telephone_responsable : v.telephone_sous_responsable) || '';
+      }
+
+      // If the top level is the responsable, and they have a distinct vice
+      if (v.responsable && v.sous_responsable && v.sous_responsable.trim().toUpperCase() !== respName) {
+        const viceName = v.sous_responsable.trim().toUpperCase();
+        const viceKey = `vice_${viceName}`;
+        if (!r.vicesMap.has(viceKey)) {
+          r.vicesMap.set(viceKey, {
+            name: viceName,
+            phone: v.telephone_sous_responsable || '',
             voters: []
           });
+        } else if (!r.vicesMap.get(viceKey)!.phone && v.telephone_sous_responsable) {
+          r.vicesMap.get(viceKey)!.phone = v.telephone_sous_responsable;
         }
-        const sr = map.get(key)!;
-        sr.total++;
-        if (v.has_voted) sr.voted++; else sr.nonVoted++;
-        sr.voters.push(v);
+        r.vicesMap.get(viceKey)!.voters.push(v);
       }
     });
 
-    return Array.from(map.values())
-      // Sort by number of non-voted (highest priority first)
-      .sort((a, b) => b.nonVoted - a.nonVoted);
+    return Array.from(map.values()).map(r => ({
+      name: r.name,
+      phone: r.phone,
+      total: r.total,
+      voted: r.voted,
+      nonVoted: r.nonVoted,
+      allVoters: r.allVoters,
+      vices: Array.from(r.vicesMap.values())
+    })).sort((a, b) => b.nonVoted - a.nonVoted);
   }, [allVoters]);
 
   // Filter by search query
@@ -176,10 +203,8 @@ export default function TrackingBoard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h2 className="font-bold text-slate-800 text-lg">{resp.name}</h2>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        resp.type === 'Responsable' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {resp.type === 'Responsable' ? 'مسؤول' : 'نائب مسؤول'}
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700">
+                        مسؤول
                       </span>
                     </div>
                     
@@ -187,10 +212,10 @@ export default function TrackingBoard() {
                       <a 
                         href={`tel:${resp.phone}`} 
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors mt-1"
+                        className="inline-flex items-center gap-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mt-2"
                       >
-                        <PhoneCall className="w-3.5 h-3.5" />
-                        اتصال بالمسؤول
+                        <PhoneCall className="w-4 h-4" />
+                        <span className="font-mono text-[14px] tracking-wide" dir="ltr">{resp.phone}</span>
                       </a>
                     )}
                   </div>
@@ -224,46 +249,136 @@ export default function TrackingBoard() {
                   ></div>
                 </div>
 
-                {/* Expanded View: Non-voters List */}
+                {/* Expanded View: Vices and Non-voters List */}
                 {isExpanded && (
-                  <div className="bg-slate-50 border-t border-slate-100 p-4">
-                    <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
-                      <UserX className="w-4 h-4 text-red-500" />
-                      قائمة الناخبين الذين لم يصوتوا بعد ({resp.nonVoted}):
-                    </h3>
+                  <div className="bg-slate-50 border-t border-slate-100 p-4 space-y-6">
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {resp.voters.filter(v => !v.has_voted).map(voter => (
-                        <div key={voter.id} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
-                          <div>
-                            <div className="font-semibold text-slate-800 text-sm">
-                              {voter.nom} {voter.prenom}
-                            </div>
-                            <div className="text-xs text-slate-500 mt-0.5">
-                              CIN: {voter.cin} • المكتب: {voter.bureau_name}
-                            </div>
-                          </div>
-                          
-                          {voter.telephone_electeur ? (
-                            <a 
-                              href={`tel:${voter.telephone_electeur}`}
-                              className="w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shrink-0"
-                            >
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          ) : (
-                            <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md">
-                              لا يوجد رقم
-                            </span>
-                          )}
+                    {/* Vices Section */}
+                    {resp.vices.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                          <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md text-xs font-bold">نواب المسؤول</span>
+                          نواب هذا المسؤول ({resp.vices.length}):
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4">
+                          {resp.vices.map(vice => {
+                            const viceNonVoters = vice.voters.filter(v => !v.has_voted);
+                            const viceKey = `vice_${resp.name}_${vice.name}`;
+                            const isViceExpanded = !!expandedVices[viceKey];
+
+                            return (
+                              <div key={vice.name} className="bg-orange-50/30 border border-orange-200/60 rounded-xl overflow-hidden shadow-sm">
+                                {/* Vice Header */}
+                                <div 
+                                  className="p-3 bg-orange-50/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 cursor-pointer hover:bg-orange-100/80 transition-colors"
+                                  onClick={(e) => toggleVice(viceKey, e)}
+                                >
+                                  <div className="flex items-start sm:items-center gap-3">
+                                    <div className="text-orange-500 mt-1 sm:mt-0">
+                                      {isViceExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-bold text-orange-900">{vice.name}</div>
+                                      <div className="text-xs text-orange-700/80 mt-1">
+                                        ناخبين تحت إشرافه: {vice.voters.length} (باقي {viceNonVoters.length} لم يصوتوا)
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {vice.phone && (
+                                    <a 
+                                      href={`tel:${vice.phone}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 text-orange-700 bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors mt-2 sm:mt-0"
+                                    >
+                                      <PhoneCall className="w-3.5 h-3.5" />
+                                      <span className="font-mono text-[13px] tracking-wide" dir="ltr">{vice.phone}</span>
+                                    </a>
+                                  )}
+                                </div>
+                                
+                                {/* Vice Voters List */}
+                                {isViceExpanded && viceNonVoters.length > 0 && (
+                                  <div className="p-3 bg-white/50 border-t border-orange-100/50">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {viceNonVoters.map(voter => (
+                                        <div key={voter.id} className="bg-white p-2.5 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
+                                          <div>
+                                            <div className="font-semibold text-slate-800 text-xs">
+                                              {voter.nom} {voter.prenom}
+                                            </div>
+                                            <div className="text-[10px] text-slate-500 mt-0.5">
+                                              CIN: {voter.cin} • المكتب: {voter.bureau_name}
+                                            </div>
+                                          </div>
+                                          {voter.telephone_electeur && (
+                                            <a 
+                                              href={`tel:${voter.telephone_electeur}`}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shrink-0"
+                                            >
+                                              <Phone className="w-3.5 h-3.5" />
+                                            </a>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {isViceExpanded && viceNonVoters.length === 0 && (
+                                  <div className="p-4 bg-white/50 border-t border-orange-100/50 text-center text-xs text-emerald-600 font-bold">
+                                    جميع الناخبين تحت إشراف هذا النائب أتموا التصويت! 🎉
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
+                      </div>
+                    )}
+
+                    {/* Non-Voters List */}
+                    <div>
+                      <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+                        <UserX className="w-4 h-4 text-red-500" />
+                        قائمة الناخبين الذين لم يصوتوا بعد ({resp.nonVoted}):
+                      </h3>
                       
-                      {resp.nonVoted === 0 && (
-                        <div className="col-span-full text-center py-6 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100 font-medium text-sm">
-                          🎉 أحسنت! جميع الناخبين التابعين لهذا المسؤول أتموا التصويت.
-                        </div>
-                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {resp.allVoters
+                          .filter(v => !v.has_voted && (!v.sous_responsable || v.sous_responsable.trim().toUpperCase() === resp.name))
+                          .map(voter => (
+                          <div key={voter.id} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm relative overflow-hidden">
+                            <div className="pr-2">
+                              <div className="font-semibold text-slate-800 text-sm">
+                                {voter.nom} {voter.prenom}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                                <div>CIN: {voter.cin} • المكتب: {voter.bureau_name}</div>
+                              </div>
+                            </div>
+                            
+                            {voter.telephone_electeur ? (
+                              <a 
+                                href={`tel:${voter.telephone_electeur}`}
+                                className="w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shrink-0 z-10"
+                              >
+                                <Phone className="w-4 h-4" />
+                              </a>
+                            ) : (
+                              <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md z-10">
+                                لا يوجد رقم
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {resp.nonVoted === 0 && (
+                          <div className="col-span-full text-center py-6 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100 font-medium text-sm">
+                            🎉 أحسنت! جميع الناخبين التابعين لهذا المسؤول أتموا التصويت.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

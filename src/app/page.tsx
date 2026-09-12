@@ -3,30 +3,30 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Building2, KeyRound } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
-  // Check if user is already logged in
+  const [pin, setPin] = useState('');
+
   useEffect(() => {
-    const checkSession = async () => {
+    const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         routeUser(session.user.id);
       }
     };
-    checkSession();
+    init();
   }, []);
 
   const routeUser = async (userId: string) => {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('role, bureau_name')
+      .select('role')
       .eq('id', userId)
       .single();
 
@@ -39,29 +39,49 @@ export default function LoginPage() {
     if (profile.role === 'admin') {
       router.push('/admin');
     } else if (profile.role === 'bureau_manager') {
-      // Pass the bureau name to the page, or the page itself will fetch it.
       router.push('/bureau');
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleBureauLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!pin) return;
+
     setLoading(true);
     setError(null);
 
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // 1. Verify PIN and get hidden email from backend
+      const res = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin.trim() })
+      });
+      
+      const result = await res.json();
 
-    if (signInError) {
-      setError('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'الرقم السري غير صحيح');
+      }
+
+      const generatedEmail = result.email;
+
+      // 2. Login with Supabase
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: generatedEmail,
+        password: pin.trim(),
+      });
+
+      if (signInError) {
+        throw new Error('فشل تسجيل الدخول يرجى المحاولة مجدداً');
+      }
+
+      if (data.user) {
+        await routeUser(data.user.id);
+      }
+    } catch (err: any) {
+      setError(err.message);
       setLoading(false);
-      return;
-    }
-
-    if (data.user) {
-      await routeUser(data.user.id);
     }
   };
 
@@ -70,82 +90,65 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center text-blue-600">
           <div className="p-3 bg-blue-100 rounded-2xl shadow-sm">
-            <Lock className="w-10 h-10" />
+            <Building2 className="w-10 h-10" />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-          منصة إدارة الانتخابات
+          دخول مكاتب التصويت
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          الرجاء تسجيل الدخول للوصول إلى مكتبك أو لوحة التحكم
+          أدخل الرقم السري الممنوح لك للدخول إلى مكتبك مباشرة
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-xl border border-white/40 sm:rounded-3xl sm:px-10 transition-all">
-          <form className="space-y-6" onSubmit={handleLogin}>
-            
-            {error && (
-              <div className="bg-red-50 border-r-4 border-red-500 p-4 rounded-xl shadow-sm">
-                <p className="text-sm text-red-700 font-semibold">{error}</p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-bold text-slate-700">
-                البريد الإلكتروني
-              </label>
-              <div className="mt-2 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  className="appearance-none block w-full px-3 py-3 pr-10 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                  placeholder="admin@party.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  dir="ltr"
-                />
-              </div>
+        <div className="bg-white/90 backdrop-blur-xl py-10 px-4 shadow-xl border border-white/40 sm:rounded-3xl sm:px-10 transition-all">
+          
+          {error && (
+            <div className="mb-6 bg-red-50 border-r-4 border-red-500 p-4 rounded-xl shadow-sm animate-pulse">
+              <p className="text-sm text-red-700 font-semibold text-center">{error}</p>
             </div>
+          )}
 
+          <form className="space-y-6" onSubmit={handleBureauLogin}>
             <div>
-              <label className="block text-sm font-bold text-slate-700">
-                كلمة المرور
-              </label>
-              <div className="mt-2 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
+              <div className="relative">
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-blue-500">
+                  <KeyRound className="w-6 h-6" />
                 </div>
                 <input
                   type="password"
                   required
-                  className="appearance-none block w-full px-3 py-3 pr-10 border border-slate-300 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none block w-full px-4 py-4 pr-14 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:ring-0 focus:border-blue-500 sm:text-lg transition-all text-center tracking-[0.5em] font-mono text-slate-800 font-bold bg-slate-50 hover:bg-white"
+                  placeholder="••••••"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
                   dir="ltr"
+                  pattern="\d*"
+                  maxLength={6}
                 />
               </div>
+              <p className="text-xs text-slate-400 mt-3 text-center">
+                الرقم السري يتكون من 6 أرقام.
+              </p>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+              disabled={loading || pin.length < 6}
+              className="w-full flex justify-center items-center gap-3 py-4 px-4 border border-transparent rounded-2xl shadow-lg shadow-blue-600/30 text-lg font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
-                  تسجيل الدخول
-                  <LogIn className="w-5 h-5" />
+                  الدخول المباشر
+                  <LogIn className="w-6 h-6" />
                 </>
               )}
             </button>
           </form>
+
         </div>
       </div>
     </div>

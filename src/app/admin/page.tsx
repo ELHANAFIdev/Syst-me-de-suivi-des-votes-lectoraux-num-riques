@@ -156,6 +156,9 @@ export default function AdminWarRoom() {
                <a href="/admin/tracking" className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-bold transition-colors">
                  لوحة التتبع (المسؤولين)
                </a>
+               <a href="/admin/accounts" className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-3 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-orange-500/30">
+                 إدارة الحسابات
+               </a>
                <a href="/admin/add-voter" className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-emerald-500/30">
                  إضافة ناخب (يدوي)
                </a>
