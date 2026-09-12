@@ -14,38 +14,51 @@ export async function POST(request: Request) {
   });
 
   try {
-    // 1. Fetch all unique bureaux from electeurs (paginate to bypass 1000 limit)
-    let allData: any[] = [];
-    let from = 0;
-    const step = 1000;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data, error } = await supabaseAdmin
-        .from('electeurs')
-        .select('bureau_name, province')
-        .range(from, from + step - 1);
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        from += step;
-        if (data.length < step) hasMore = false;
-      } else {
-        hasMore = false;
-      }
+    let requestBody: any = {};
+    try {
+      requestBody = await request.json();
+    } catch (e) {
+      // Ignore if no JSON body
     }
 
-    // Deduplicate
+    const singleBureauName = requestBody.bureau_name;
     const uniqueBureaux = new Map<string, { bureau_name: string, province: string }>();
-    allData.forEach(v => {
-      if (v.bureau_name && v.province) {
-        if (!uniqueBureaux.has(v.bureau_name)) {
-          uniqueBureaux.set(v.bureau_name, { bureau_name: v.bureau_name, province: v.province });
+
+    if (singleBureauName) {
+      uniqueBureaux.set(singleBureauName, { bureau_name: singleBureauName, province: 'غير محدد' });
+    } else {
+      // 1. Fetch all unique bureaux from electeurs (paginate to bypass 1000 limit)
+      let allData: any[] = [];
+      let from = 0;
+      const step = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabaseAdmin
+          .from('electeurs')
+          .select('bureau_name, province')
+          .range(from, from + step - 1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allData = allData.concat(data);
+          from += step;
+          if (data.length < step) hasMore = false;
+        } else {
+          hasMore = false;
         }
       }
-    });
+
+      // Deduplicate
+      allData.forEach(v => {
+        if (v.bureau_name && v.province) {
+          if (!uniqueBureaux.has(v.bureau_name)) {
+            uniqueBureaux.set(v.bureau_name, { bureau_name: v.bureau_name, province: v.province });
+          }
+        }
+      });
+    }
 
     const results = [];
 

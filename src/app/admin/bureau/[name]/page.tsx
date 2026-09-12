@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase-client';
-import { Loader2, ArrowRight, UserCheck, UserX, Phone, Search, Users } from 'lucide-react';
+import { Loader2, ArrowRight, UserCheck, UserX, Phone, Search, Users, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 
 type Voter = {
@@ -27,6 +27,34 @@ export default function AdminBureauDetails() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'voted' | 'pending'>('all');
+  const [generatingPin, setGeneratingPin] = useState(false);
+  const [newPin, setNewPin] = useState<string | null>(null);
+
+  const handleGeneratePin = async () => {
+    if (!confirm('هل أنت متأكد؟ سيتم تغيير الرقم السري لهذا المكتب ولن يتمكن من الدخول بالرقم القديم.')) return;
+    
+    setGeneratingPin(true);
+    setNewPin(null);
+
+    try {
+      const res = await fetch('/api/bureau-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bureau_name: bureauName })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+      
+      if (data.accounts && data.accounts.length > 0) {
+        setNewPin(data.accounts[0].pin);
+      }
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setGeneratingPin(false);
+    }
+  };
 
   useEffect(() => {
     if (bureauName) {
@@ -109,12 +137,23 @@ export default function AdminBureauDetails() {
               </h1>
             </div>
             
-            {/* Bureau Quick Stats */}
-            <div className="text-left bg-slate-100 px-4 py-2 rounded-xl">
-              <div className="text-xs text-slate-500 font-bold mb-1">نسبة المشاركة</div>
-              <div className="flex items-end gap-2 justify-end">
-                <span className="text-2xl font-black text-slate-800">{percent}%</span>
-                <span className="text-sm text-slate-500 font-bold mb-1" dir="ltr">{votedCount} / {totalCount}</span>
+            {/* Action Buttons & Bureau Quick Stats */}
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <button
+                onClick={handleGeneratePin}
+                disabled={generatingPin}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                {generatingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                تغيير الرقم السري
+              </button>
+              
+              <div className="text-left bg-slate-100 px-4 py-2 rounded-xl">
+                <div className="text-xs text-slate-500 font-bold mb-1">نسبة المشاركة</div>
+                <div className="flex items-end gap-2 justify-end">
+                  <span className="text-2xl font-black text-slate-800">{percent}%</span>
+                  <span className="text-sm text-slate-500 font-bold mb-1" dir="ltr">{votedCount} / {totalCount}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -158,7 +197,21 @@ export default function AdminBureauDetails() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto p-4 mt-4">
+      <main className="max-w-5xl mx-auto p-4 mt-4 space-y-4">
+        
+        {newPin && (
+          <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div>
+              <h3 className="font-bold text-emerald-800 text-lg mb-1">تم تغيير الرقم السري بنجاح!</h3>
+              <p className="text-emerald-600 text-sm">المرجو الاحتفاظ بهذا الرقم وإرساله لرئيس المكتب لتسجيل الدخول.</p>
+            </div>
+            <div className="bg-white px-6 py-3 rounded-xl border border-emerald-100 shadow-sm text-center min-w-[200px]">
+              <div className="text-xs text-emerald-500 font-bold mb-1">الرقم السري الجديد</div>
+              <div className="text-3xl font-black text-emerald-700 tracking-[0.2em]">{newPin}</div>
+            </div>
+          </div>
+        )}
+
         {filteredVoters.length === 0 ? (
           <div className="text-center py-20 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-300">
             <Users className="w-12 h-12 mx-auto text-slate-300 mb-3" />

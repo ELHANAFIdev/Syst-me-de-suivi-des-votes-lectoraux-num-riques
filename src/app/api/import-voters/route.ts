@@ -62,11 +62,13 @@ export async function POST(request: Request) {
     const cins = uniqueMappedVoters.map(v => v.cin);
     
     // We might need to chunk the fetch if there are thousands of voters
-    const BATCH_SIZE = 1000;
+    const FETCH_BATCH_SIZE = 200; // Small batch for GET request (URL length limit)
+    const UPSERT_BATCH_SIZE = 1000; // Larger batch for POST request (body)
+    
     const existingVoters: any[] = [];
     
-    for (let i = 0; i < cins.length; i += BATCH_SIZE) {
-      const batchCins = cins.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < cins.length; i += FETCH_BATCH_SIZE) {
+      const batchCins = cins.slice(i, i + FETCH_BATCH_SIZE);
       const { data, error } = await supabase
         .from('electeurs')
         .select('cin, has_voted, voted_at')
@@ -96,8 +98,8 @@ export async function POST(request: Request) {
 
     // 5. Upsert data in batches
     let upsertCount = 0;
-    for (let i = 0; i < finalDataToUpsert.length; i += BATCH_SIZE) {
-      const batch = finalDataToUpsert.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < finalDataToUpsert.length; i += UPSERT_BATCH_SIZE) {
+      const batch = finalDataToUpsert.slice(i, i + UPSERT_BATCH_SIZE);
       const { error } = await supabase
         .from('electeurs')
         .upsert(batch, { onConflict: 'cin', ignoreDuplicates: false });
