@@ -314,9 +314,10 @@ export default function TrackingBoard() {
                                             <a 
                                               href={`tel:${voter.telephone_electeur}`}
                                               onClick={(e) => e.stopPropagation()}
-                                              className="w-8 h-8 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shrink-0"
+                                              className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1.5 rounded-md transition-colors shrink-0"
                                             >
-                                              <Phone className="w-3.5 h-3.5" />
+                                              <Phone className="w-3 h-3" />
+                                              <span className="font-mono text-[11px] tracking-wide font-bold" dir="ltr">{voter.telephone_electeur}</span>
                                             </a>
                                           )}
                                         </div>
@@ -361,9 +362,10 @@ export default function TrackingBoard() {
                             {voter.telephone_electeur ? (
                               <a 
                                 href={`tel:${voter.telephone_electeur}`}
-                                className="w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-700 flex items-center justify-center transition-colors shrink-0 z-10"
+                                className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2.5 py-1.5 rounded-lg transition-colors shrink-0 z-10"
                               >
-                                <Phone className="w-4 h-4" />
+                                <Phone className="w-3.5 h-3.5" />
+                                <span className="font-mono text-xs tracking-wide font-bold" dir="ltr">{voter.telephone_electeur}</span>
                               </a>
                             ) : (
                               <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md z-10">

@@ -99,11 +99,14 @@ export default function AdminWarRoom() {
     const voted = statValues.reduce((acc, curr) => acc + curr.voted, 0);
     const percent = total === 0 ? 0 : ((voted / total) * 100).toFixed(1);
     
-    // Sort bureaux by lowest participation first to identify lagging offices
+    // Sort bureaux numerically by bureau number
+    const extractNumber = (name: string) => {
+      const match = name.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    };
+
     const sortedBureaux = [...statValues].sort((a, b) => {
-      const percentA = a.total === 0 ? 0 : a.voted / a.total;
-      const percentB = b.total === 0 ? 0 : b.voted / b.total;
-      return percentA - percentB;
+      return extractNumber(a.bureau_name) - extractNumber(b.bureau_name);
     });
 
     return { total, voted, percent, sortedBureaux };
@@ -214,7 +217,7 @@ export default function AdminWarRoom() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-2 text-slate-800">
               <BarChart3 className="w-5 h-5" />
-              <h2 className="text-lg font-semibold">حالة مكاتب التصويت (الأقل مشاركة أولاً)</h2>
+              <h2 className="text-lg font-semibold">حالة مكاتب التصويت (مرتبة بالأرقام تصاعدياً)</h2>
             </div>
             
             {/* Province Filter */}
