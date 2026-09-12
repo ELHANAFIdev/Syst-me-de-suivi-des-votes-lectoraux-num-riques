@@ -190,7 +190,7 @@ export default function TrackingBoard() {
           </div>
         ) : (
           filteredResponsables.map((resp, index) => {
-            const isExpanded = expandedId === `${resp.type}_${resp.name}`;
+            const isExpanded = expandedId === resp.name;
             const percent = resp.total === 0 ? 0 : Math.round((resp.voted / resp.total) * 100);
             
             return (
@@ -198,7 +198,7 @@ export default function TrackingBoard() {
                 {/* Responsable Header Card */}
                 <div 
                   className="p-4 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  onClick={() => setExpandedId(isExpanded ? null : `${resp.type}_${resp.name}`)}
+                  onClick={() => setExpandedId(isExpanded ? null : resp.name)}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
