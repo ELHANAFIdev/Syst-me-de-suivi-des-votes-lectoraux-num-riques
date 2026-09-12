@@ -54,15 +54,31 @@ export default function TrackingBoard() {
 
   const fetchAllData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('electeurs')
-      .select('*');
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
+    
+    while (true) {
+      const { data, error } = await supabase
+        .from('electeurs')
+        .select('*')
+        .range(from, from + step - 1);
 
-    if (error) {
-      console.error('Error fetching voters:', error);
-    } else {
-      setAllVoters(data as Voter[]);
+      if (error) {
+        console.error('Error fetching voters:', error);
+        break;
+      }
+      
+      if (data) {
+        allData = [...allData, ...data];
+        if (data.length < step) break;
+      } else {
+        break;
+      }
+      from += step;
     }
+    
+    setAllVoters(allData as Voter[]);
     setLoading(false);
   };
 

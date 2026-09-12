@@ -48,15 +48,31 @@ export default function AdminWarRoom() {
     // Fetch all needed fields to aggregate stats locally.
     // For a massive DB (>100k), an RPC function in Supabase doing GROUP BY is recommended.
     // This approach works perfectly for up to ~50k-100k records for the Admin Dashboard.
-    const { data, error } = await supabase
-      .from('electeurs')
-      .select('bureau_name, province, has_voted');
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
+    
+    while (true) {
+      const { data, error } = await supabase
+        .from('electeurs')
+        .select('bureau_name, province, has_voted')
+        .range(from, from + step - 1);
 
-    if (error) {
-      console.error('Error fetching data:', error);
-      setLoading(false);
-      return;
+      if (error) {
+        console.error('Error fetching data:', error);
+        break;
+      }
+      
+      if (data) {
+        allData = [...allData, ...data];
+        if (data.length < step) break;
+      } else {
+        break;
+      }
+      from += step;
     }
+    
+    const data = allData;
 
     const aggregated: Record<string, BureauStat> = {};
 
