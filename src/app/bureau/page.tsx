@@ -204,29 +204,14 @@ export default function BureauDashboard() {
                 
                 {/* Voter Info */}
                 <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-slate-800 text-base">
+                  <div className="flex items-center gap-2 mt-2">
+                    <h2 className="font-bold text-slate-800 text-lg">
                       {voter.nom} {voter.prenom}
                     </h2>
-                    <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-md font-mono tracking-wider border border-slate-200">
+                    <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-md font-mono tracking-wider border border-slate-200">
                       {voter.cin}
                     </span>
                   </div>
-                  
-                  <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span className="truncate max-w-[200px]">{voter.adresse || 'بدون عنوان'}</span>
-                  </div>
-                  
-                  {voter.telephone_electeur && (
-                    <a 
-                      href={`tel:${voter.telephone_electeur}`}
-                      className="inline-flex items-center gap-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors mt-1 w-fit"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      اتصال بالناخب
-                    </a>
-                  )}
                 </div>
 
                 {/* Vote Action Button */}

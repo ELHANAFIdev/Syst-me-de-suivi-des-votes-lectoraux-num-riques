@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { Search, Phone, UserX, ChevronDown, ChevronUp, Loader2, PhoneCall, ArrowRight } from 'lucide-react';
+import { Search, Phone, UserX, ChevronDown, ChevronUp, Loader2, PhoneCall, ArrowRight, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 
 type Voter = {
@@ -42,6 +42,33 @@ export default function TrackingBoard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedVices, setExpandedVices] = useState<Record<string, boolean>>({});
+  const [generatingPinFor, setGeneratingPinFor] = useState<string | null>(null);
+  const [newPins, setNewPins] = useState<Record<string, string>>({});
+
+  const generateResponsablePin = async (responsableName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`هل أنت متأكد من تغيير الرقم السري لـ ${responsableName}؟ سيفقد الرقم القديم صلاحيته.`)) return;
+    
+    setGeneratingPinFor(responsableName);
+    try {
+      const res = await fetch('/api/responsable-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ responsable_name: responsableName })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+      
+      const acc = data.accounts[0];
+      if (acc && acc.pin) {
+        setNewPins(prev => ({ ...prev, [responsableName]: acc.pin }));
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setGeneratingPinFor(null);
+    }
+  };
 
   const toggleVice = (viceKey: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -156,7 +183,24 @@ export default function TrackingBoard() {
   const filteredResponsables = useMemo(() => {
     if (!searchQuery) return responsablesList;
     const q = searchQuery.toLowerCase();
-    return responsablesList.filter(r => r.name.toLowerCase().includes(q));
+    return responsablesList.filter(r => {
+      // Search in Responsable name
+      if (r.name.toLowerCase().includes(q)) return true;
+      
+      // Search in Vice-Responsables names
+      if (r.vices.some(v => v.name.toLowerCase().includes(q))) return true;
+      
+      // Search in Voters (Name, CIN, Phone)
+      if (r.allVoters.some(voter => 
+        (voter.nom + ' ' + voter.prenom).toLowerCase().includes(q) ||
+        (voter.cin || '').toLowerCase().includes(q) ||
+        (voter.telephone_electeur || '').includes(q)
+      )) {
+        return true;
+      }
+      
+      return false;
+    });
   }, [responsablesList, searchQuery]);
 
   if (loading) {
@@ -190,7 +234,7 @@ export default function TrackingBoard() {
             <input
               type="text"
               className="w-full bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl py-3 pr-10 pl-4 text-sm transition-all outline-none"
-              placeholder="ابحث عن اسم المسؤول أو نائب المسؤول..."
+              placeholder="ابحث عن اسم المسؤول، النائب، أو الناخب (الاسم، CIN)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -206,8 +250,17 @@ export default function TrackingBoard() {
           </div>
         ) : (
           filteredResponsables.map((resp, index) => {
-            const isExpanded = expandedId === resp.name;
+            const isSearchActive = searchQuery.trim().length > 0;
+            const isExpanded = expandedId === resp.name || isSearchActive;
             const percent = resp.total === 0 ? 0 : Math.round((resp.voted / resp.total) * 100);
+            
+            const q = searchQuery.toLowerCase();
+            const isVoterMatch = (voter: Voter) => {
+              if (!isSearchActive) return false;
+              return (voter.nom + ' ' + voter.prenom).toLowerCase().includes(q) ||
+                     (voter.cin || '').toLowerCase().includes(q) ||
+                     (voter.telephone_electeur || '').includes(q);
+            };
             
             return (
               <div key={index} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -234,6 +287,23 @@ export default function TrackingBoard() {
                         <span className="font-mono text-[14px] tracking-wide" dir="ltr">{resp.phone}</span>
                       </a>
                     )}
+
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                      {newPins[resp.name] ? (
+                        <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-200">
+                          الرقم السري الجديد: <span className="font-mono text-sm tracking-widest">{newPins[resp.name]}</span>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={(e) => generateResponsablePin(resp.name, e)}
+                          disabled={generatingPinFor === resp.name}
+                          className="inline-flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border border-purple-100 disabled:opacity-50"
+                        >
+                          {generatingPinFor === resp.name ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
+                          تغيير الرقم السري
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Stats Badges */}
@@ -280,7 +350,7 @@ export default function TrackingBoard() {
                           {resp.vices.map(vice => {
                             const viceNonVoters = vice.voters.filter(v => !v.has_voted);
                             const viceKey = `vice_${resp.name}_${vice.name}`;
-                            const isViceExpanded = !!expandedVices[viceKey];
+                            const isViceExpanded = !!expandedVices[viceKey] || isSearchActive;
 
                             return (
                               <div key={vice.name} className="bg-orange-50/30 border border-orange-200/60 rounded-xl overflow-hidden shadow-sm">
@@ -310,14 +380,33 @@ export default function TrackingBoard() {
                                       <span className="font-mono text-[13px] tracking-wide" dir="ltr">{vice.phone}</span>
                                     </a>
                                   )}
+                                  
+                                  <div className="mt-2 sm:mt-0 sm:mr-auto" onClick={(e) => e.stopPropagation()}>
+                                    {newPins[vice.name] ? (
+                                      <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md text-[10px] font-bold border border-emerald-200">
+                                        الرقم السري: <span className="font-mono tracking-wider">{newPins[vice.name]}</span>
+                                      </div>
+                                    ) : (
+                                      <button 
+                                        onClick={(e) => generateResponsablePin(vice.name, e)}
+                                        disabled={generatingPinFor === vice.name}
+                                        className="inline-flex items-center gap-1 bg-white/50 hover:bg-white text-orange-700 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors border border-orange-200 disabled:opacity-50"
+                                      >
+                                        {generatingPinFor === vice.name ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+                                        تغيير الرقم
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                                 
                                 {/* Vice Voters List */}
                                 {isViceExpanded && viceNonVoters.length > 0 && (
                                   <div className="p-3 bg-white/50 border-t border-orange-100/50">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                      {viceNonVoters.map(voter => (
-                                        <div key={voter.id} className="bg-white p-2.5 rounded-lg border border-slate-200 flex justify-between items-center shadow-sm">
+                                      {viceNonVoters.map(voter => {
+                                        const isMatch = isVoterMatch(voter);
+                                        return (
+                                          <div key={voter.id} className={`p-2.5 rounded-lg flex justify-between items-center shadow-sm border transition-all duration-300 ${isMatch ? 'bg-yellow-50 border-yellow-400 ring-2 ring-yellow-400/50 scale-[1.02]' : 'bg-white border-slate-200'}`}>
                                           <div>
                                             <div className="font-semibold text-slate-800 text-xs">
                                               {voter.nom} {voter.prenom}
@@ -331,13 +420,15 @@ export default function TrackingBoard() {
                                               href={`tel:${voter.telephone_electeur}`}
                                               onClick={(e) => e.stopPropagation()}
                                               className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1.5 rounded-md transition-colors shrink-0"
+                                              className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2.5 py-1.5 rounded-md transition-colors shrink-0"
                                             >
                                               <Phone className="w-3 h-3" />
                                               <span className="font-mono text-[11px] tracking-wide font-bold" dir="ltr">{voter.telephone_electeur}</span>
                                             </a>
                                           )}
                                         </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
@@ -364,8 +455,10 @@ export default function TrackingBoard() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {resp.allVoters
                           .filter(v => !v.has_voted && (!v.sous_responsable || v.sous_responsable.trim().toUpperCase() === resp.name))
-                          .map(voter => (
-                          <div key={voter.id} className="bg-white p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm relative overflow-hidden">
+                          .map(voter => {
+                            const isMatch = isVoterMatch(voter);
+                            return (
+                          <div key={voter.id} className={`p-3 rounded-xl flex justify-between items-center shadow-sm relative overflow-hidden transition-all duration-300 border ${isMatch ? 'bg-yellow-50 border-yellow-400 ring-2 ring-yellow-400/50 scale-[1.02]' : 'bg-white border-slate-200'}`}>
                             <div className="pr-2">
                               <div className="font-semibold text-slate-800 text-sm">
                                 {voter.nom} {voter.prenom}
@@ -389,7 +482,8 @@ export default function TrackingBoard() {
                               </span>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                         
                         {resp.nonVoted === 0 && (
                           <div className="col-span-full text-center py-6 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100 font-medium text-sm">

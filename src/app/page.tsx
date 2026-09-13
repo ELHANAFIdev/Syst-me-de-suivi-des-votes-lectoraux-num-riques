@@ -26,7 +26,7 @@ export default function LoginPage() {
   const routeUser = async (userId: string) => {
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, bureau_name')
       .eq('id', userId)
       .single();
 
@@ -39,7 +39,11 @@ export default function LoginPage() {
     if (profile.role === 'admin') {
       router.push('/admin');
     } else if (profile.role === 'bureau_manager') {
-      router.push('/bureau');
+      if (profile.bureau_name?.startsWith('RESP_')) {
+        router.push('/responsable');
+      } else {
+        router.push('/bureau');
+      }
     }
   };
 
