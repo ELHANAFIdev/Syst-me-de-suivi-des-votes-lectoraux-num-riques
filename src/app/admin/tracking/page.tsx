@@ -419,7 +419,6 @@ export default function TrackingBoard() {
                                             <a 
                                               href={`tel:${voter.telephone_electeur}`}
                                               onClick={(e) => e.stopPropagation()}
-                                              className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1.5 rounded-md transition-colors shrink-0"
                                               className="inline-flex items-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 px-2.5 py-1.5 rounded-md transition-colors shrink-0"
                                             >
                                               <Phone className="w-3 h-3" />
