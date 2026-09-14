@@ -14,6 +14,7 @@ type Voter = {
   has_voted: boolean;
   bureau_name: string;
   adresse: string;
+  sous_responsable: string;
 };
 
 export default function ResponsableDashboard() {
@@ -21,6 +22,7 @@ export default function ResponsableDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [responsableName, setResponsableName] = useState<string>('');
+  const [selectedVice, setSelectedVice] = useState<string | null>(null);
   
   const router = useRouter();
 
@@ -114,16 +116,40 @@ export default function ResponsableDashboard() {
     router.replace('/');
   };
 
-  // Fast filtering by CIN, First Name, or Last Name
+  // Extract unique vice responsables
+  const viceResponsables = useMemo(() => {
+    const set = new Set<string>();
+    voters.forEach(v => {
+      if (v.sous_responsable && v.sous_responsable.trim().toUpperCase() !== responsableName.trim().toUpperCase()) {
+        set.add(v.sous_responsable.trim());
+      }
+    });
+    return Array.from(set);
+  }, [voters, responsableName]);
+
+  // Fast filtering by CIN, First Name, Last Name, and Vice Responsable
   const filteredVoters = useMemo(() => {
-    if (!searchQuery) return voters;
-    const query = searchQuery.toLowerCase();
-    return voters.filter(v => 
-      v.cin?.toLowerCase().includes(query) ||
-      v.nom?.toLowerCase().includes(query) ||
-      v.prenom?.toLowerCase().includes(query)
-    );
-  }, [voters, searchQuery]);
+    let result = voters;
+    
+    if (selectedVice) {
+      if (selectedVice === 'direct') {
+        result = result.filter(v => !v.sous_responsable || v.sous_responsable.trim().toUpperCase() === responsableName.trim().toUpperCase());
+      } else {
+        result = result.filter(v => v.sous_responsable?.trim() === selectedVice);
+      }
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(v => 
+        v.cin?.toLowerCase().includes(query) ||
+        v.nom?.toLowerCase().includes(query) ||
+        v.prenom?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [voters, searchQuery, selectedVice, responsableName]);
 
   const stats = useMemo(() => {
     const total = voters.length;
@@ -192,6 +218,33 @@ export default function ResponsableDashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          {/* Vice Responsables Filter Tabs */}
+          {viceResponsables.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide mt-1">
+              <button
+                onClick={() => setSelectedVice(null)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${!selectedVice ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+              >
+                الجميع
+              </button>
+              <button
+                onClick={() => setSelectedVice('direct')}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedVice === 'direct' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+              >
+                تابعين لي مباشرة
+              </button>
+              {viceResponsables.map(vice => (
+                <button
+                  key={vice}
+                  onClick={() => setSelectedVice(vice)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedVice === vice ? 'bg-orange-500 text-white shadow-md' : 'bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100'}`}
+                >
+                  {vice}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
@@ -228,9 +281,15 @@ export default function ResponsableDashboard() {
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5 text-slate-500 text-xs">
                     <MapPin className="w-3.5 h-3.5" />
                     <span className="font-semibold text-slate-700">مكتب: {voter.bureau_name}</span>
+                    
+                    {voter.sous_responsable && voter.sous_responsable.trim().toUpperCase() !== responsableName.trim().toUpperCase() && (
+                      <span className="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded-md font-bold border border-orange-200">
+                        نائب: {voter.sous_responsable}
+                      </span>
+                    )}
                   </div>
                   
                   {voter.telephone_electeur && !voter.has_voted && (
