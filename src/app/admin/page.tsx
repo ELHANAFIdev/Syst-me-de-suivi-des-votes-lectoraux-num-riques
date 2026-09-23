@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase-client';
-import { Users, CheckCircle, Activity, BarChart3, Loader2 } from 'lucide-react';
+import { Users, CheckCircle, Activity, BarChart3, Loader2, Trash2 } from 'lucide-react';
 
 type BureauStat = {
   bureau_name: string;
@@ -16,6 +16,7 @@ export default function AdminWarRoom() {
   const [stats, setStats] = useState<Record<string, BureauStat>>({});
   const [loading, setLoading] = useState(true);
   const [selectedProvince, setSelectedProvince] = useState<string>('الكل');
+  const [deletingBureau, setDeletingBureau] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -90,6 +91,33 @@ export default function AdminWarRoom() {
 
     setStats(aggregated);
     setLoading(false);
+  };
+
+  const handleDeleteBureau = async (bureau_name: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigating to bureau page
+    e.stopPropagation();
+
+    if (!confirm(`هل أنت متأكد من أنك تريد حذف "${bureau_name}" وجميع الناخبين التابعين له؟ لا يمكن التراجع عن هذه العملية.`)) {
+      return;
+    }
+
+    setDeletingBureau(bureau_name);
+    try {
+      const res = await fetch('/api/delete-bureau', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bureau_name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ أثناء الحذف');
+      
+      alert('تم الحذف بنجاح!');
+      // Refetch the data to update the UI
+      fetchInitialData();
+    } catch (error: any) {
+      alert(error.message);
+      setDeletingBureau(null);
+    }
   };
 
   const handleRealtimeUpdate = (bureauName: string, hasVoted: boolean) => {
@@ -271,9 +299,23 @@ export default function AdminWarRoom() {
                       : 'border-slate-200 hover:border-blue-400'
                   }`}
                 >
-                  <h3 className="font-semibold text-slate-800 text-sm truncate mb-3 group-hover:text-blue-600 transition-colors" title={bureau.bureau_name}>
-                    {bureau.bureau_name}
-                  </h3>
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-semibold text-slate-800 text-sm truncate group-hover:text-blue-600 transition-colors pr-1" title={bureau.bureau_name}>
+                      {bureau.bureau_name}
+                    </h3>
+                    <button
+                      onClick={(e) => handleDeleteBureau(bureau.bureau_name, e)}
+                      disabled={deletingBureau === bureau.bureau_name}
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors flex-shrink-0 z-20"
+                      title="حذف المكتب"
+                    >
+                      {deletingBureau === bureau.bureau_name ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                   
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-2xl font-bold text-slate-900">{percent}%</span>
